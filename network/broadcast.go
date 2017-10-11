@@ -95,6 +95,6 @@ func listenOnSpecificInterface(p *ipv4.PacketConn, iface *net.Interface) {
 }
 
 func main() {
-  // Listen()
+  Listen()
   Announce()
 }
