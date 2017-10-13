@@ -3,13 +3,10 @@ package main
 import (
   "bufio"
   "fmt"
+  "golang.org/x/net/ipv4"
   "log"
   "net"
   "os"
-)
-
-import (
-  "golang.org/x/net/ipv4"
 )
 
 func Announce() {
@@ -63,10 +60,6 @@ func Listen() {
 }
 
 func listenOnSpecificInterface(p *ipv4.PacketConn, iface *net.Interface) {
-  if iface.Name != "enp2s0" {
-    return
-  }
-
   mDNSLinkLocal := net.UDPAddr{IP: net.IPv4(224, 0, 0, 251)}
   if err := p.JoinGroup(iface, &mDNSLinkLocal); err != nil {
     log.Fatal(err)
@@ -95,6 +88,6 @@ func listenOnSpecificInterface(p *ipv4.PacketConn, iface *net.Interface) {
 }
 
 func main() {
-  Listen()
+  // Listen()
   Announce()
 }
