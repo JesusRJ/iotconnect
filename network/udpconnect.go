@@ -6,6 +6,8 @@ import (
   "net"
 )
 
+https://www.socketloop.com/tutorials/golang-udp-client-server-read-write-example
+
 func main() {
   ipv4Addr := &net.UDPAddr{IP: net.IPv4(255, 255, 255, 255), Port: 8089}
   conn, err := net.ListenUDP("udp4", ipv4Addr)
