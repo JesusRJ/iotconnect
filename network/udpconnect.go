@@ -64,36 +64,36 @@ func getip(text string) string {
 func main() {
   Announce()
 
-  service := ipservice + ":" + portNum
+  // service := ipservice + ":" + portNum
 
-  RemoteAddr, err := net.ResolveUDPAddr("udp", service)
+  // RemoteAddr, err := net.ResolveUDPAddr("udp", service)
 
-  conn, err := net.DialUDP("udp", nil, RemoteAddr)
-  if err != nil {
-    log.Fatal(err)
-  }
+  // conn, err := net.DialUDP("udp", nil, RemoteAddr)
+  // if err != nil {
+  //   log.Fatal(err)
+  // }
 
-  log.Printf("Established connection to %s \n", service)
-  log.Printf("Remote UDP address : %s \n", conn.RemoteAddr().String())
-  log.Printf("Local UDP client address : %s \n", conn.LocalAddr().String())
+  // log.Printf("Established connection to %s \n", service)
+  // log.Printf("Remote UDP address : %s \n", conn.RemoteAddr().String())
+  // log.Printf("Local UDP client address : %s \n", conn.LocalAddr().String())
 
-  defer conn.Close()
+  // defer conn.Close()
 
-  // write a message to server
-  // message := []byte("cmd=ping")
-  message := []byte("cmd=control&d=1")
+  // // write a message to server
+  // // message := []byte("cmd=ping")
+  // message := []byte("cmd=control&d=1")
 
-  _, err = conn.Write(message)
+  // _, err = conn.Write(message)
 
-  if err != nil {
-    log.Println(err)
-  }
+  // if err != nil {
+  //   log.Println(err)
+  // }
 
-  // receive message from server
-  buffer := make([]byte, 1024)
-  n, addr, err := conn.ReadFromUDP(buffer)
+  // // receive message from server
+  // buffer := make([]byte, 1024)
+  // n, addr, err := conn.ReadFromUDP(buffer)
 
-  fmt.Println("UDP Server : ", addr)
-  fmt.Println("Received from UDP server : ", string(buffer[:n]))
+  // fmt.Println("UDP Server : ", addr)
+  // fmt.Println("Received from UDP server : ", string(buffer[:n]))
 
 }
