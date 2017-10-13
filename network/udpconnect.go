@@ -1,3 +1,7 @@
+/* UDPConnect
+ * Identifica o IP usando broadcast na rede
+ * ttps://www.socketloop.com/tutorials/golang-udp-client-server-read-write-example
+ */
 package main
 
 import (
@@ -6,8 +10,6 @@ import (
   "net"
   "strings"
 )
-
-https://www.socketloop.com/tutorials/golang-udp-client-server-read-write-example
 
 // Default ip address
 var ipservice, portNum string = "", "8089"
