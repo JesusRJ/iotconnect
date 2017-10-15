@@ -16,7 +16,6 @@ import (
 )
 
 // UDP address
-// var ipservice, portNum string = "", "8089"
 var (
   RemoteAddr *net.UDPAddr
   RemoteConn *net.UDPConn
@@ -50,10 +49,13 @@ func connectcar() {
       log.Fatal(err)
     }
 
-    buf := make([]byte, 1024)
+    // Set timeout to 10s
+    c.SetReadDeadline(time.Now().Add(10 * time.Second))
 
+    buf := make([]byte, 1024)
     if _, addr, err := c.ReadFromUDP(buf); err != nil {
-      log.Fatal(err)
+      log.Println(err)
+      RemoteAddr = nil
     } else {
       RemoteAddr = addr
       RemoteConn, err = net.DialUDP("udp", nil, RemoteAddr)
@@ -146,10 +148,17 @@ func sendCommand(x, y int) string {
   // write a message to server
   message := []byte(fmt.Sprintf("cmd=control&d=%d", state))
 
+  RemoteConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+
   _, err := RemoteConn.Write(message)
 
   if err != nil {
     log.Println(err)
+    // printAt(30, 21, fmt.Sprintf("%s", err))
+    RemoteAddr = nil
+    RemoteConn = nil
+    // Try reconnect car
+    connectcar()
   }
 
   // receive message from server
