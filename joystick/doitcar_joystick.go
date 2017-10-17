@@ -15,16 +15,11 @@ import (
   "time"
 )
 
-// UDP address
-var (
-  RemoteAddr *net.UDPAddr
-  RemoteConn *net.UDPConn
-  CarState   int
-)
+var carState int
 
 // Connect to car: send message by broadcast and
 // get car's IP address
-func connectcar() {
+func connectCar() *net.UDPConn {
   laddr, err := net.ResolveUDPAddr("udp", ":0")
   if err != nil {
     log.Fatal(err)
@@ -42,7 +37,9 @@ func connectcar() {
 
   defer c.Close()
 
-  for RemoteAddr == nil {
+  var udpconn *net.UDPConn
+
+  for udpconn == nil {
     _, err := c.WriteToUDP([]byte("cmd=ping"), maddr)
 
     if err != nil {
@@ -50,20 +47,36 @@ func connectcar() {
     }
 
     // Set timeout to 10s
-    c.SetReadDeadline(time.Now().Add(10 * time.Second))
+    c.SetReadDeadline(time.Now().Add(3 * time.Second))
 
     buf := make([]byte, 1024)
     if _, addr, err := c.ReadFromUDP(buf); err != nil {
       log.Println(err)
-      RemoteAddr = nil
+      udpconn = nil
     } else {
-      RemoteAddr = addr
-      RemoteConn, err = net.DialUDP("udp", nil, RemoteAddr)
+      udpconn, err = net.DialUDP("udp", nil, addr)
       if err != nil {
         log.Fatal(err)
       }
     }
   }
+
+  return udpconn
+}
+
+func connectJoystick(id int) joystick.Joystick {
+  var js joystick.Joystick = nil
+  var jserr error
+
+  for js == nil {
+    js, jserr = joystick.Open(id)
+
+    if jserr != nil {
+      printAt(1, 22, "Error: "+jserr.Error())
+      time.Sleep(5 * time.Second)
+    }
+  }
+  return js
 }
 
 func printAt(x, y int, s string) {
@@ -89,12 +102,12 @@ func translateAxis(data int) (pos int) {
   return
 }
 
-func readJoystick(js joystick.Joystick) (x, y int) {
+func readJoystick(js joystick.Joystick) (x, y int, e error) {
   jinfo, err := js.Read()
 
   if err != nil {
     printAt(1, 6, "Error: "+err.Error())
-    return
+    return 0, 0, err
   }
 
   printAt(1, 6, "Buttons:")
@@ -123,7 +136,7 @@ func readJoystick(js joystick.Joystick) (x, y int) {
   return
 }
 
-func sendCommand(x, y int) string {
+func sendCommand(x, y int, remoteConn *net.UDPConn) (string, error) {
   var state int
 
   switch {
@@ -139,37 +152,35 @@ func sendCommand(x, y int) string {
     state = 0
   }
 
-  if state == CarState {
-    return ""
+  if state == carState {
+    return "", nil
   } else {
-    CarState = state
+    carState = state
   }
 
   // write a message to server
   message := []byte(fmt.Sprintf("cmd=control&d=%d", state))
 
-  RemoteConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+  remoteConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
-  _, err := RemoteConn.Write(message)
+  _, err := remoteConn.Write(message)
 
   if err != nil {
     log.Println(err)
-    // printAt(30, 21, fmt.Sprintf("%s", err))
-    RemoteAddr = nil
-    RemoteConn = nil
-    // Try reconnect car
-    connectcar()
+    return "", err
   }
 
   // receive message from server
   buffer := make([]byte, 1024)
-  n, _, err := RemoteConn.ReadFromUDP(buffer)
-  return string(buffer[:n])
+  n, _, err := remoteConn.ReadFromUDP(buffer)
+  return string(buffer[:n]), nil
 }
 
 func main() {
   // Get remote address
-  connectcar()
+  remoteConn := connectCar()
+
+  defer remoteConn.Close()
 
   // Get Joystick reference
   jsid := 0
@@ -182,12 +193,7 @@ func main() {
     jsid = i
   }
 
-  js, jserr := joystick.Open(jsid)
-
-  if jserr != nil {
-    fmt.Println(jserr)
-    return
-  }
+  js := connectJoystick(jsid)
 
   // Init termbox
   err := termbox.Init()
@@ -223,11 +229,16 @@ func main() {
       printAt(1, 1, fmt.Sprintf("Joystick Name: %s", js.Name()))
       printAt(1, 2, fmt.Sprintf("   Axis Count: %d", js.AxisCount()))
       printAt(1, 3, fmt.Sprintf(" Button Count: %d", js.ButtonCount()))
-      printAt(1, 4, fmt.Sprintf("  UDP address: %s \n", RemoteConn.RemoteAddr().String()))
+      printAt(1, 4, fmt.Sprintf("  UDP address: %s\n", remoteConn.RemoteAddr().String()))
 
-      x, y := readJoystick(js)
+      x, y, err := readJoystick(js)
+      if err != nil {
+        log.Println(err)
+        js = connectJoystick(jsid)
+      }
+
       printAt(30, 19, fmt.Sprintf("X: %d, Y: %d", x, y))
-      msg := sendCommand(x, y)
+      msg, _ := sendCommand(x, y, remoteConn)
       printAt(30, 20, fmt.Sprintf("%s", msg))
       termbox.Flush()
     }
